@@ -1,4 +1,4 @@
-"""Builds index.html (English men's SL/GS course-setting page) from the frozen base data set, the survey
+"""Builds _build/page.html (English men's SL/GS course-setting page) from the frozen base data set, the survey
 PDFs added automatically from Dropbox (data/auto/) and the sync status (data/status.json).
 Derived from build_all_html.py of the original workshop; the page itself is unchanged."""
 import json, re, sys, os, glob, html, datetime
@@ -224,7 +224,8 @@ for k,L in data.items():
         c=dict(c); c['lab']=T.DATA.get(c['lab'],c['lab']); c['pi']=T.DATA.get(c['pi'],c['pi']); den[k].append(c)
 en_page,en_full=finish(en,json.dumps(den,ensure_ascii=False,separators=(',',':')),'en')
 en_full=en_full.replace('</body>\n</html>\n',status_html()+'</body>\n</html>\n',1)
-open(ROOT+'/index.html','w',encoding='utf-8').write(en_full)
+os.makedirs(ROOT+'/_build',exist_ok=True)
+open(ROOT+'/_build/page.html','w',encoding='utf-8').write(en_full)   # plain page; published only encrypted (build/encrypt.py)
 # leftovers: literals that still look German
 lits=sorted(set(re.findall(r"'((?:[^'\\\n]|\\.)*)'",body)))
 rx=re.compile(r"[äöüÄÖÜß]|\b(der|die|das|und|mit|von|für|nicht|Tor|Tore|Toren|Kurs|Kurse|Lauf|Läufe|Rennen|Abstand|Winkel|Neigung|Saison|Ort|Alle|kein|keine|pro|zum|im|als|aus|auf|Figur|Figuren|Teil|Datum|Quelle|Mittel|Auswahl|Klick|gewertet|Vergleich)\b")

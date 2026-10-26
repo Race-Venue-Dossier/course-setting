@@ -16,17 +16,26 @@ and updated every morning from the coach's shared Dropbox folder.
      "under review" and the issue *Dropbox files under review* keeps the list. They need the OCR + visual check
      done in a working session; afterwards set their status in `data/manifest.json` to `reviewed`.
    - Women's races, videos and other files are `ignored`.
-2. `build/build_page.py` builds `index.html` from `data/base/` (the data set from the workshop, including all
+2. `build/build_page.py` builds the page (`_build/page.html`) from `data/base/` (the data set from the workshop, including all
    manual corrections), `data/auto/` and `data/status.json`.
-3. `build/check_page.py` opens the page in a browser (both disciplines, every tab, desktop and phone width).
+3. `build/check_page.py` opens the page in a browser (both disciplines, every tab, desktop and phone width);
+   `build/encrypt.py` encrypts it into `index.html`, which is tested again with the password.
    If anything fails, nothing is published and the current page stays online.
 4. Data and page are committed; GitHub Pages serves `index.html`.
+
+## Password
+
+The published page is encrypted (AES-256-GCM, key from the password via PBKDF2-SHA256, 600 000 rounds) by
+`build/encrypt.py`; the browser decrypts it after the password is entered ("stay signed in" keeps the derived key
+in that browser). The password is never in the repository: the daily run reads it from the Actions secret
+`PAGE_PASSWORD` (Settings → Secrets and variables → Actions). Without the secret the run stops before publishing.
+A push of `index.html` publishes the committed (already encrypted) file as it is.
 
 ## Files
 
 | Path | What |
 |---|---|
-| `index.html` | the page (English, self-contained, also works offline) |
+| `index.html` | the published page, encrypted (English, self-contained, also works offline) |
 | `data/base/` | courses and method figures from the workshop (`Werkstatt.zip`), frozen |
 | `data/auto/` | courses added automatically from new survey PDFs |
 | `data/manifest.json` | every Dropbox file with checksum and status (`baseline`, `added`, `duplicate`, `pending`, `reviewed`, `ignored`, `removed`) |
@@ -42,4 +51,5 @@ The full workshop (OCR scripts for GPS sheets, German page) is in `Werkstatt.zip
 pip install -r build/requirements.txt && python -m playwright install chromium
 python build/sync_dropbox.py          # or --zip folder.zip
 python build/build_page.py && python build/check_page.py
+PAGE_PASSWORD=... python build/encrypt.py && PAGE_PASSWORD=... python build/check_page.py --encrypted
 ```

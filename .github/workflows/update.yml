@@ -4,9 +4,9 @@ on:
   schedule:
     - cron: '17 4 * * *'        # every day 05:17 Swiss winter time (06:17 summer time)
   workflow_dispatch:             # "Run workflow" button in the Actions tab
-  push:
+  push:                          # publishes the committed (already encrypted) index.html
     branches: [main]
-    paths: ['build/**', 'data/**', 'assets/**', '.github/workflows/**']
+    paths: ['index.html', '.github/workflows/**']
 
 permissions:
   contents: write
@@ -34,6 +34,7 @@ jobs:
           cache-dependency-path: build/requirements.txt
 
       - name: Install
+        if: github.event_name != 'push'
         run: |
           pip install -r build/requirements.txt
           python -m playwright install --with-deps chromium
@@ -44,12 +45,27 @@ jobs:
         run: python build/sync_dropbox.py
 
       - name: Build page
+        if: github.event_name != 'push'
         run: python build/build_page.py
 
       - name: Test page (stops here on any problem - the published page stays as it is)
+        if: github.event_name != 'push'
         run: python build/check_page.py
 
+      - name: Encrypt page with the password (secret PAGE_PASSWORD)
+        if: github.event_name != 'push'
+        env:
+          PAGE_PASSWORD: ${{ secrets.PAGE_PASSWORD }}
+        run: python build/encrypt.py
+
+      - name: Test encrypted page (wrong password rejected, right one opens everything)
+        if: github.event_name != 'push'
+        env:
+          PAGE_PASSWORD: ${{ secrets.PAGE_PASSWORD }}
+        run: python build/check_page.py --encrypted
+
       - name: Save data and page
+        if: github.event_name != 'push'
         run: |
           git config user.name "course-setting bot"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -58,6 +74,10 @@ jobs:
             git commit -m "Dropbox check $(date -u +%F): ${{ steps.sync.outputs.added || 0 }} added, ${{ steps.sync.outputs.pending || 0 }} under review"
             git push
           fi
+
+      - name: Published page must be the encrypted one
+        run: |
+          grep -q 'id="pw"' index.html && ! grep -q '__KS' index.html || { echo "index.html is not password protected - not publishing"; exit 1; }
 
       - name: Issue for files under review
         if: github.event_name != 'push'

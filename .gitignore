@@ -1,0 +1,4 @@
+pending.md
+__pycache__/
+*.pyc
+_site/

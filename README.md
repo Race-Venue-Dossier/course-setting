@@ -1,0 +1,45 @@
+# Course setting – men's slalom and giant slalom
+
+Interactive analysis of course settings (Swiss-Ski FEA). The page is `index.html`, published with GitHub Pages
+and updated every morning from the coach's shared Dropbox folder.
+
+## How the daily update works
+
+`.github/workflows/update.yml` runs every day (and on demand via *Actions → Daily Dropbox update → Run workflow*):
+
+1. `build/sync_dropbox.py` downloads the shared Dropbox folder and compares it with `data/manifest.json`.
+   - **Survey PDFs (MBCD)** of men's SL/GS races, named like `2026-01-11_Adelboden_WC_Men_SL_2Run.pdf`, are read
+     automatically with the same rules as the original pipeline (figures and gates far outside the normal range
+     never count as regular open gates) and stored in `data/auto/SL|GS/`. A race run that is already in the
+     data set is skipped as `duplicate`.
+   - **GPS sheets / screenshots / Excel / other PDFs** are marked `pending`: the page lists them at the bottom as
+     "under review" and the issue *Dropbox files under review* keeps the list. They need the OCR + visual check
+     done in a working session; afterwards set their status in `data/manifest.json` to `reviewed`.
+   - Women's races, videos and other files are `ignored`.
+2. `build/build_page.py` builds `index.html` from `data/base/` (the data set from the workshop, including all
+   manual corrections), `data/auto/` and `data/status.json`.
+3. `build/check_page.py` opens the page in a browser (both disciplines, every tab, desktop and phone width).
+   If anything fails, nothing is published and the current page stays online.
+4. Data and page are committed; GitHub Pages serves `index.html`.
+
+## Files
+
+| Path | What |
+|---|---|
+| `index.html` | the page (English, self-contained, also works offline) |
+| `data/base/` | courses and method figures from the workshop (`Werkstatt.zip`), frozen |
+| `data/auto/` | courses added automatically from new survey PDFs |
+| `data/manifest.json` | every Dropbox file with checksum and status (`baseline`, `added`, `duplicate`, `pending`, `reviewed`, `ignored`, `removed`) |
+| `data/status.json` | last check and files under review (shown on the page) |
+| `build/` | build scripts, page template and page modules (`js/`), English texts (`i18n_all_en.py`) |
+
+The Dropbox link is set in `build/sync_dropbox.py` (or as the `DROPBOX_URL` environment variable).
+The full workshop (OCR scripts for GPS sheets, German page) is in `Werkstatt.zip` in the project folder on OneDrive.
+
+## Local
+
+```
+pip install -r build/requirements.txt && python -m playwright install chromium
+python build/sync_dropbox.py          # or --zip folder.zip
+python build/build_page.py && python build/check_page.py
+```
